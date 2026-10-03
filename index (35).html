@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Temperature Probe — Upside Down Learning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1B2541; --navy2:#26325A; --grid:#33416B; --cream:#F4EFE6; --card:#FFFFFF;
+    --gold:#E2AC48; --ochre:#8A5A12; --teal:#2E7D74; --tealB:#45B3A5; --orange:#D9773A;
+    --ink:#1B2541; --line:#E6DDCB;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{overflow:hidden}
+  body{background:var(--cream);color:var(--ink);font-family:'Nunito',system-ui,sans-serif;font-size:16px;line-height:1.4;-webkit-font-smoothing:antialiased}
+  .wrap{width:1000px;transform-origin:top left;background:var(--cream)}
+  header{background:var(--navy);padding:14px 24px 12px;color:#fff}
+  h1{font-size:1.6rem;font-weight:800;margin:0;letter-spacing:.01em}
+  .bar{width:150px;height:4px;background:var(--gold);border-radius:2px;margin:6px 0 6px}
+  .sub{font-size:.92rem;font-weight:700;color:#F4EFE6}
+  main{padding:10px 20px 4px}
+  .stage{display:grid;gap:12px;align-items:start}
+  .card{background:var(--card);border-radius:12px;padding:10px 14px 12px;box-shadow:0 1px 3px rgba(27,37,65,.12)}
+  .card h2{display:flex;align-items:center;gap:9px;font-size:.84rem;font-weight:800;letter-spacing:.06em;margin:0 0 8px;color:var(--navy)}
+  .ic{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .ic svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  .ic.gold{background:var(--gold)} .ic.gold svg{stroke:var(--navy)}
+  .ic.teal{background:var(--teal)} .ic.orange{background:var(--orange)} .ic.navy{background:var(--navy)}
+  canvas{display:block;width:100%;background:var(--navy);border-radius:10px}
+  .hint{font-size:.8rem;font-weight:700;color:var(--ochre);margin-top:6px}
+  .panel{display:flex;flex-direction:column;gap:12px}
+  .row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:0}
+  .row .k{font-size:.9rem;font-weight:700;white-space:nowrap}
+  .row .v{font-size:1.1rem;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;color:var(--navy)}
+  .row .v.hot{color:var(--orange)}
+  input[type=range]{width:100%;accent-color:var(--gold)}
+  .ends{display:flex;justify-content:space-between;font-size:.8rem;font-weight:700;color:var(--ochre)}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  button{font-family:inherit;font-size:.9rem;font-weight:800;background:var(--navy);color:#fff;border:2px solid var(--navy);border-radius:8px;padding:7px 10px;cursor:pointer}
+  button:hover{background:var(--navy2)}
+  button.teal{background:var(--teal);border-color:var(--teal)}
+  button.teal:hover{background:#25685F}
+  button.ghost{background:#fff;color:var(--navy)}
+  button.ghost:hover{background:var(--cream)}
+  button.on{background:var(--gold);border-color:var(--gold);color:var(--navy)}
+  button.wide{grid-column:1/-1}
+  button:focus-visible,input:focus-visible,canvas:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+  footer{display:flex;justify-content:space-between;gap:12px;padding:6px 22px 10px;font-size:.8rem;font-weight:700;color:var(--ochre)}
+
+  .stage{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Temperature Probe</h1>
+    <div class="bar"></div>
+    <div class="sub">Lower the probe and read the temperature at each depth.</div>
+  </header>
+  <main>
+  <div class="stage">
+    <div class="panel">
+      <div class="card">
+        <h2><span class="ic orange"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg></span><span id="viewTitle">CROSS-SECTION OF EARTH</span></h2>
+        <canvas id="earth" aria-label="Cross-section of Earth with a temperature probe"></canvas>
+        <div class="hint" id="viewHint">The crust is too thin to see here. Use Zoom for the top 100 km.</div>
+      </div>
+      <div class="card">
+        <h2><span class="ic teal"><svg viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M7 7l4 3 3 6 5 2"/></svg></span>TEMPERATURE WITH DEPTH</h2>
+        <canvas id="graph" aria-label="Graph of temperature against depth"></canvas>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="card">
+        <h2><span class="ic gold"><svg viewBox="0 0 24 24"><path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/></svg></span>READINGS</h2>
+        <div class="row"><span class="k">Depth</span><span class="v" id="dep">0 km</span></div>
+        <div class="row"><span class="k">Layer</span><span class="v" id="lay">Crust</span></div>
+        <div class="row"><span class="k">State</span><span class="v" id="sta">Solid</span></div>
+        <div class="row"><span class="k">Temperature</span><span class="v hot" id="tmp">15 °C</span></div>
+      </div>
+      <div class="card">
+        <h2><span class="ic navy"><svg viewBox="0 0 24 24"><path d="M12 3v14"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg></span><label for="depth">PROBE DEPTH</label></h2>
+        <input type="range" id="depth" min="0" max="6371" step="1" value="0">
+        <div class="ends"><span id="endL">0 km</span><span id="endR">6,371 km</span></div>
+        <div class="btns">
+          <button id="dMinus">− 1 km</button>
+          <button id="dPlus">+ 1 km</button>
+          <button id="zoom" class="teal wide" aria-pressed="false">Zoom: top 100 km</button>
+          <button id="reset" class="ghost wide">Start over</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </main>
+  <footer><span>Upside Down Learning</span><span>Interior temperatures are scientific estimates.</span></footer>
+</div>
+<script>
+(function(){
+  "use strict";
+  var FONT="'Nunito',system-ui,sans-serif";
+  var COL={navy:"#1B2541",grid:"#33416B",cream:"#F4EFE6",gold:"#E2AC48",teal:"#45B3A5",orange:"#D9773A",crust:"#9C7A55",mantle:"#D9773A",outer:"#E2AC48",inner:"#F7DC95"};
+  var TEMP=[[0,15],[35,715],[100,1300],[410,1500],[660,1650],[2700,2600],[2890,3800],[5150,5000],[6371,5400]];
+  function tAt(d){for(var i=0;i<TEMP.length-1;i++){var a=TEMP[i],b=TEMP[i+1];if(d>=a[0]&&d<=b[0])return a[1]+(b[1]-a[1])*(d-a[0])/(b[0]-a[0]);}return 5400;}
+  function layer(d){if(d<35)return["Crust","Solid"];if(d<2890)return["Mantle","Solid"];if(d<5150)return["Outer core","Liquid"];return["Inner core","Solid"];}
+  var depth=0,zoom=false;
+  var slider=document.getElementById("depth"),zb=document.getElementById("zoom");
+  function setup(cv,h){var r=window.devicePixelRatio||1,w=cv.clientWidth;cv.width=w*r;cv.height=h*r;cv.style.height=h+"px";var x=cv.getContext("2d");x.setTransform(r,0,0,r,0,0);return[x,w,h];}
+  function setDepth(d){
+    var mx=zoom?100:6371;depth=Math.max(0,Math.min(mx,Math.round(d)));slider.value=depth;
+    document.getElementById("dep").textContent=depth.toLocaleString()+" km";
+    document.getElementById("tmp").textContent=Math.round(tAt(depth)).toLocaleString()+" °C";
+    var L=layer(depth);document.getElementById("lay").textContent=L[0];document.getElementById("sta").textContent=L[1];
+    draw();
+  }
+  slider.addEventListener("input",function(e){setDepth(+e.target.value);});
+  document.getElementById("dMinus").onclick=function(){setDepth(depth-1);};
+  document.getElementById("dPlus").onclick=function(){setDepth(depth+1);};
+  zb.onclick=function(){
+    zoom=!zoom;zb.classList.toggle("on",zoom);zb.setAttribute("aria-pressed",zoom);
+    zb.textContent=zoom?"Show whole Earth":"Zoom: top 100 km";
+    slider.max=zoom?100:6371;
+    document.getElementById("endR").textContent=zoom?"100 km":"6,371 km";
+    document.getElementById("viewTitle").textContent=zoom?"TOP 100 KM":"CROSS-SECTION OF EARTH";
+    document.getElementById("viewHint").textContent=zoom?"Use − 1 km and + 1 km for exact readings.":"The crust is too thin to see here. Use Zoom for the top 100 km.";
+    setDepth(Math.min(depth,zoom?100:6371));
+  };
+  document.getElementById("reset").onclick=function(){if(zoom)zb.onclick();setDepth(0);};
+
+  function dot(x,px,py){x.fillStyle=COL.teal;x.beginPath();x.arc(px,py,8,0,7);x.fill();x.strokeStyle="#FFFFFF";x.lineWidth=2.5;x.stroke();}
+  function drawEarth(){
+    var cv=document.getElementById("earth"),a=setup(cv,176),x=a[0],w=a[1],h=a[2];
+    x.clearRect(0,0,w,h);
+    if(!zoom){
+      var R=Math.min(w-40,(h-26)*2)/2,cx=w/2,cy=h-12,k=R/6371;
+      function ring(r,col){x.fillStyle=col;x.beginPath();x.arc(cx,cy,r,Math.PI,2*Math.PI);x.closePath();x.fill();}
+      ring(R,COL.crust);ring((6371-35)*k,COL.mantle);ring((6371-2890)*k,COL.outer);ring((6371-5150)*k,COL.inner);
+      x.font="800 12px "+FONT;x.textAlign="center";x.textBaseline="middle";x.fillStyle=COL.navy;
+      var rm=(6371-1450)*k,ro=(6371-4000)*k;
+      x.fillText("MANTLE",cx-rm*0.72,cy-rm*0.69);
+      x.fillText("OUTER CORE",cx-ro*0.70,cy-ro*0.48);
+      x.fillText("INNER",cx,cy-((6371-5760)*k)*0.55);
+      var py=cy-(6371-depth)*k;
+      x.strokeStyle="#FFFFFF";x.lineWidth=2;x.setLineDash([4,3]);x.beginPath();x.moveTo(cx,cy-R-10);x.lineTo(cx,py);x.stroke();x.setLineDash([]);
+      dot(x,cx,py);
+    }else{
+      var T=14,B=14,ph=h-T-B,L=64,W=w-L-16;function y(d){return T+d/100*ph;}
+      x.fillStyle=COL.crust;x.fillRect(L,y(0),W,y(35)-y(0));
+      x.fillStyle=COL.mantle;x.fillRect(L,y(35),W,y(100)-y(35));
+      x.font="800 12px "+FONT;x.fillStyle=COL.navy;x.textAlign="left";x.textBaseline="middle";
+      x.fillText("CRUST",L+10,y(17));x.fillText("UPPER MANTLE",L+10,y(67));
+      x.fillStyle=COL.cream;x.textAlign="right";x.font="700 11px "+FONT;
+      for(var d=0;d<=100;d+=10)x.fillText(d+" km",L-8,y(d));
+      x.strokeStyle="#FFFFFF";x.lineWidth=2;x.beginPath();x.moveTo(L+W*0.6,y(depth));x.lineTo(L+W,y(depth));x.stroke();
+      dot(x,L+W*0.6,y(depth));
+    }
+  }
+  function drawGraph(){
+    var cv=document.getElementById("graph"),a=setup(cv,132),x=a[0],w=a[1],h=a[2];
+    var L=54,Rp=14,T=12,B=36,pw=w-L-Rp,ph=h-T-B,maxD=zoom?100:6371,maxT=zoom?1400:6000;
+    function px(d){return L+d/maxD*pw;}function py(t){return T+(1-t/maxT)*ph;}
+    x.clearRect(0,0,w,h);x.font="700 11px "+FONT;
+    var tS=zoom?200:1000,dS=zoom?20:1000;
+    x.textAlign="right";x.textBaseline="middle";
+    for(var t=0;t<=maxT;t+=tS){x.strokeStyle=COL.grid;x.lineWidth=1;x.beginPath();x.moveTo(L,py(t));x.lineTo(w-Rp,py(t));x.stroke();x.fillStyle=COL.cream;x.fillText(t.toLocaleString(),L-6,py(t));}
+    x.textAlign="center";x.textBaseline="top";
+    for(var d=0;d<=maxD;d+=dS){x.strokeStyle=COL.grid;x.beginPath();x.moveTo(px(d),T);x.lineTo(px(d),T+ph);x.stroke();x.fillStyle=COL.cream;x.fillText(d.toLocaleString(),px(d),T+ph+4);}
+    x.fillStyle=COL.gold;x.font="800 11px "+FONT;x.fillText("Depth (km)",L+pw/2,T+ph+19);
+    x.save();x.translate(12,T+ph/2);x.rotate(-Math.PI/2);x.textBaseline="middle";x.fillText("°C",0,0);x.restore();
+    x.strokeStyle=COL.orange;x.lineWidth=3;x.beginPath();
+    for(var i=0;i<=300;i++){var dd=i/300*maxD;if(i)x.lineTo(px(dd),py(tAt(dd)));else x.moveTo(px(dd),py(tAt(dd)));}x.stroke();
+    x.fillStyle=COL.teal;x.beginPath();x.arc(px(depth),py(tAt(depth)),6,0,7);x.fill();x.strokeStyle="#fff";x.lineWidth=2;x.stroke();
+  }
+  function draw(){drawEarth();drawGraph();}
+  var wrap=document.querySelector(".wrap");
+  function fit(){wrap.style.transform="none";wrap.style.marginLeft="0";var s=Math.min(window.innerWidth/wrap.offsetWidth,window.innerHeight/wrap.offsetHeight);wrap.style.transform="scale("+s+")";wrap.style.marginLeft=Math.max(0,(window.innerWidth-wrap.offsetWidth*s)/2)+"px";}
+  window.addEventListener("resize",function(){draw();fit();});
+  (document.fonts?document.fonts.ready:Promise.resolve()).then(function(){draw();fit();});
+  setDepth(0);fit();
+})();
+</script>
+</body>
+</html>
